@@ -6,7 +6,7 @@
 - [Tech Stack](#tech-stack)
 - [Installation](#installation)
 - [User Roles](#user-roles)
-- [Author](#author)
+- [Author](#author-)
 
 
 ## About the Project
