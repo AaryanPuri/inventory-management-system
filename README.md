@@ -6,7 +6,7 @@
 - [Tech Stack](#tech-stack)
 - [Installation](#installation)
 - [User Roles](#user-roles)
-
+- [Author](author)
 
 
 ## About the Project
@@ -52,4 +52,4 @@ d) CustomerOrder
 
 
 
-# 🧑‍💻 Author: Aaryan Puri
+## 🧑‍💻 Author: Aaryan Puri
