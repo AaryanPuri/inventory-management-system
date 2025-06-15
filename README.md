@@ -6,7 +6,7 @@
 - [Tech Stack](#tech-stack)
 - [Installation](#installation)
 - [User Roles](#user-roles)
-- [Author](author)
+- [Author](#author)
 
 
 ## About the Project
@@ -54,4 +54,4 @@ d) CustomerOrder
 
 ## 👤 Author
 **Aaryan Puri**  
-[LinkedIn](https://www.linkedin.com/in/aaryan-puri-04923a228/?profileId=ACoAADj8zrkBa2y9Dzyvyl3sUsCqr-4P-RhcAgA) • [GitHub]([https://github.com/your-username](https://github.com/AaryanPuri)) • [Email](mailto:aaryanpuri75@gmail.com)
+[LinkedIn](https://www.linkedin.com/in/aaryan-puri-04923a228/?profileId=ACoAADj8zrkBa2y9Dzyvyl3sUsCqr-4P-RhcAgA) • [GitHub](https://github.com/AaryanPuri) • [Email](mailto:aaryanpuri75@gmail.com)
