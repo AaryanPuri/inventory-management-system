@@ -52,6 +52,6 @@ d) CustomerOrder
 
 
 
-## 👤 Author
+## Author 👤
 **Aaryan Puri**  
 [LinkedIn](https://www.linkedin.com/in/aaryan-puri-04923a228/?profileId=ACoAADj8zrkBa2y9Dzyvyl3sUsCqr-4P-RhcAgA) • [GitHub](https://github.com/AaryanPuri) • [Email](mailto:aaryanpuri75@gmail.com)
