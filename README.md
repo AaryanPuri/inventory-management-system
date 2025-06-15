@@ -1,4 +1,4 @@
-📦 Inventory Management System
+# 📦 Inventory Management System
 
 An Inventory Management System built using Python and MySQL, designed to streamline and simplify inventory tracking, product management, order handling, and user role management for retail businesses or organizations.
 
