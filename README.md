@@ -35,8 +35,15 @@ An Inventory Management System built using Python and MySQL, designed to streaml
 6. tkcalendar, pandastable (GUI enhancements)
 
 ## Installation
-1. Prerequisites- Python 3.7 or higher, MySQL server, Required Python libraries: pip install mysql-connector-python pandas matplotlib tkcalendar pandastable
-
+1. Prerequisites- Python 3.7 or higher, MySQL server, Install Python dependencies: ```pip install -r requirements.txt  ```
+2. Configure Credentials-
+   ```
+    DB_HOST=localhost
+    DB_USER=your_username
+    DB_PASSWORD=your_password
+    DB_DATABASE=inventory
+   ```
+   
 2. Setup Database
 Run the program once. If the database inventory does not exist, it will be created automatically with required tables:
 a) Users
@@ -44,7 +51,7 @@ b) Products
 c) Storage
 d) CustomerOrder
 
-3. Run the Application: CLI Version- python "User Roles and Reporting.py"
+3. Run the Application: CLI Version- python "User Roles and Reporting.py", GUI Version- python "Inventory Management GUI.py"
 
 ## User Roles
 1) Admin- Can view reports, Add/remove users, Manage employees
