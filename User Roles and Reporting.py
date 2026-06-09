@@ -8,10 +8,17 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-def view():
-    global db
+try:
+    import bcrypt
+except ImportError:
+    print("ERROR: bcrypt is required. Run: pip install bcrypt")
+    sys.exit(1)
+
+# FIX: removed all global db usage — db is now passed as a parameter
+
+def view(db):
     cu = db.cursor()
-    print("1-products report, 2-staff report, 3-storage report, 4-Customer Order Report,5-Yearly Report")
+    print("1-products report, 2-staff report, 3-storage report, 4-Customer Order Report, 5-Yearly Report")
     i = input("Enter your choice : ")
     if i == "1":
         cu.execute("select * from products")
@@ -95,166 +102,203 @@ def view():
         plt.legend((p1[0], p2[0], p3[0]), ("Sale", "Cost", "Profit"))
         plt.show()
 
-def remove_employee():
-    global db
+def remove_employee(db):
     cu = db.cursor()
     i = input("Enter name of employee: ")
-
-    cu.execute("Select * from Users where name = '%s'" % (i))
+    # FIX: parameterized query
+    cu.execute("SELECT * FROM Users WHERE Name = %s", (i,))
     result = cu.fetchall()
-
     if result == []:
         print("Employee Name Incorrect/Does not exist")
         return
+    cu.execute("DELETE FROM Users WHERE Name = %s", (i,))
+    db.commit()
 
-    cu.execute("delete from users where name='%s'" % i)
-    db.commit() 
-
-def add_user():
-    global db
+def add_user(db):
     cu = db.cursor()
     a = input("Admin/Manager: ").lower()
     u = input("Enter username: ")
     p = input("Enter password: ")
-    cu.execute("select count(*) from Users")
-    r_count = cu.fetchone()[0]
-    if r_count < 0:
-        r_count = 0
-    cu.execute("insert into Users values({0},'{1}','{2}','{3}')".format(r_count + 1, u, a, p))
+    # FIX: hash password with bcrypt before storing
+    # FIX: parameterized query + AUTO_INCREMENT handles IdNo
+    hashed = bcrypt.hashpw(p.encode(), bcrypt.gensalt()).decode()
+    cu.execute(
+        "INSERT INTO Users (Name, UserType, password) VALUES (%s, %s, %s)",
+        (u, a, hashed)
+    )
     db.commit()
 
-def admin(u):
+def admin(u, db):
     print("")
-    print("1-view stats, 2-remove employee, 3-Add User,4-exit")
+    print("1-view stats, 2-remove employee, 3-Add User, 4-exit")
     i = input("Enter your choice : ")
     if i == "1":
-        view()
+        view(db)
     elif i == "2":
-        remove_employee()
+        remove_employee(db)
     elif i == "3":
-        add_user()
+        add_user(db)
     elif i == "4":
         return True
     return False
 
-def manager(u):
+def manager(u, db):
     print("")
     print("1-Add Product, 2-Edit Product, 3-Customer Order, 4-View Details, 5-Exit")
     i = input("Enter your choice : ")
     if i == "1":
-        add_product()
+        add_product(db)
     elif i == "2":
-        edit_product()
+        edit_product(db)
     elif i == "3":
-        customerorder()
+        customerorder(db)
     elif i == "4":
-        view()
+        view(db)
     elif i == "5":
         return True
     return False
 
-def users():
-    global db
+def migrate_db(db):
+    cu = db.cursor()
+    try:
+        cu.execute("""
+            SELECT EXTRA FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'Users'
+            AND COLUMN_NAME = 'IdNo'
+        """)
+        result = cu.fetchone()
+        if result and 'auto_increment' not in result[0].lower():
+            cu.execute("SET @r = 0")
+            cu.execute("UPDATE Users SET IdNo = (@r := @r + 1) ORDER BY IdNo")
+            db.commit()
+            cu.execute("ALTER TABLE Users MODIFY COLUMN IdNo INT PRIMARY KEY AUTO_INCREMENT")
+            db.commit()
+    except Exception as e:
+        print(f"Schema migration warning: {e}")
 
-    print("Login-L,quit-q")
+def users(db):
+    print("Login-L, quit-q")
     x = input("Enter your choice : ").lower()
     print("")
     if x == "l":
         cu = db.cursor()
         cu.execute("select * from Users")
-        cu = cu.fetchall()
-        if cu == []:
-            print("No admin assigned create admin")
-            add_user()
-            users() 
-            return 
+        rows = cu.fetchall()
+        if rows == []:
+            print("No admin assigned. Create admin first.")
+            add_user(db)
+            users(db)
+            return
         u = input("Enter username: ")
         p = input("Enter password: ")
         cu = db.cursor()
-        cu.execute("select Name, password, usertype from Users;")
-        cu = cu.fetchall()
-        valid_user = 0
-        for i in cu:
-            if u == i[0] and p == i[1]:
-                valid_user = 1
-                if i[2] == "admin":
-                    while True:
-                        quit = admin(u)
-                        if quit == True:
-                            break
-                    break
-                else:
-                    while True:
-                        quit = manager(u)
-                        if quit == True:
-                            break
-                    break
-        if valid_user == 0:
+        cu.execute("SELECT Name, password, UserType FROM Users WHERE Name = %s", (u,))
+        user = cu.fetchone()
+        if user is None:
+            print("Invalid username/password")
+            return
+        stored_pwd = user[1]
+        authenticated = False
+        if stored_pwd.startswith('$2b$') or stored_pwd.startswith('$2a$'):
+            authenticated = bcrypt.checkpw(p.encode(), stored_pwd.encode())
+        else:
+            # Legacy plain text password — migrate to bcrypt on successful login
+            if p == stored_pwd:
+                authenticated = True
+                hashed = bcrypt.hashpw(p.encode(), bcrypt.gensalt()).decode()
+                cu2 = db.cursor()
+                cu2.execute("UPDATE Users SET password = %s WHERE Name = %s", (hashed, u))
+                db.commit()
+        if authenticated:
+            if user[2] == "admin":
+                while True:
+                    quit = admin(u, db)
+                    if quit:
+                        break
+            else:
+                while True:
+                    quit = manager(u, db)
+                    if quit:
+                        break
+        else:
             print("Invalid username/password")
     elif x == 'q':
         sys.exit(0)
 
-def storage(p_name, purchase_cost, pqty, pid):
-    global db
+def storage(db, p_name, purchase_cost, pqty, pid):
     cu = db.cursor()
     purchase_date = input("Enter purchase date(YYYY-MM-DD): ")
     year, month, day = map(int, purchase_date.split("-"))
     purchase_date = datetime.date(year, month, day)
-    cu = db.cursor()
-    cu.execute("insert into Storage values({0},'{1}',{2},{3},{4},'{5}')".format(pid, p_name, purchase_cost, pqty, pqty, purchase_date))
+    # FIX: parameterized query
+    cu.execute(
+        "INSERT INTO Storage VALUES (%s, %s, %s, %s, %s, %s)",
+        (pid, p_name, purchase_cost, pqty, pqty, purchase_date)
+    )
     db.commit()
 
-def add_product():
-    global db
+def add_product(db):
     try:
         pid = input("enter product id: ")
         p_name = input("Enter product name: ")
         supp_name = input("Enter supplier name: ")
         pqty = input("Enter Purchase qty: ")
         product_cost = int(input("Enter product cost: "))
-
         saleprice = int(input("enter sale price: "))
         cu = db.cursor()
-        cu.execute("insert into Products values({0},'{1}',{2},'{3}')".format(pid, p_name, saleprice, supp_name))
+        # FIX: parameterized query
+        cu.execute(
+            "INSERT INTO Products VALUES (%s, %s, %s, %s)",
+            (pid, p_name, saleprice, supp_name)
+        )
         db.commit()
-        storage(p_name, product_cost, pqty, pid)
+        storage(db, p_name, product_cost, pqty, pid)
     except mys.IntegrityError:
         print("Product already exists")
 
-def edit_product():
-    global db
+def edit_product(db):
     cu = db.cursor()
     p_name = input("Enter product name : ")
     pid = input("Enter product id: ")
-    cu.execute("Select * from products where ProductName = '%s' and P_Id=%s" % (p_name, pid))
+    # FIX: parameterized query
+    cu.execute(
+        "SELECT * FROM Products WHERE ProductName = %s AND P_Id = %s",
+        (p_name, pid)
+    )
     result = cu.fetchall()
-
     if result == []:
         print("Product does not exist")
         return
-
     add_quantity = input("Enter how much quantity to add: ")
-    cu.execute("update storage set CurrentQuantity=CurrentQuantity+%s where Productname = '%s'" % (add_quantity, p_name))
-    db.commit() 
+    cu.execute(
+        "UPDATE Storage SET CurrentQuantity = CurrentQuantity + %s WHERE ProductName = %s",
+        (add_quantity, p_name)
+    )
+    db.commit()
 
-def customerorder():
-    global db
+def customerorder(db):
     cu = db.cursor()
-
     productname = input("Enter product name: ")
     pid = int(input("enter product id: "))
-    cu.execute("Select * from products where ProductName = '%s' and P_Id=%s" % (productname, pid))
+    # FIX: parameterized query
+    cu.execute(
+        "SELECT * FROM Products WHERE ProductName = %s AND P_Id = %s",
+        (productname, pid)
+    )
     result = cu.fetchall()
-
     if result == []:
         print("Product does not exist")
         return
-    
+
     quantity = int(input("Enter quantity: "))
 
-    cu.execute("Select CurrentQuantity from Storage where Productname = '%s'" % productname)
+    cu.execute(
+        "SELECT CurrentQuantity FROM Storage WHERE ProductName = %s",
+        (productname,)
+    )
     current_quantity = cu.fetchall()[0][0]
-    
+
     if current_quantity == 0:
         print("Sorry this item is not available")
         return
@@ -263,21 +307,28 @@ def customerorder():
         print("Quantity is greater than available %d" % (current_quantity))
         quantity = int(input("Enter Updated quantity : "))
 
-    user_id = input("Enter cutomer name: ")
+    user_id = input("Enter customer name: ")
     billno = int(input("Enter bill no: "))
 
     saledate = input("Enter sale date(YYYY-MM-DD): ")
     year, month, day = map(int, saledate.split("-"))
     saledate = datetime.date(year, month, day)
+
     cu = db.cursor()
-    cu.execute("Select saleprice from Products where P_Id = '%s'" % pid)
+    cu.execute("SELECT SalePrice FROM Products WHERE P_Id = %s", (pid,))
     total = (cu.fetchall()[0][0]) * quantity
-    cu.execute("insert into CustomerOrder values({0},'{1}','{2}',{3},{4},'{5}',{6})".format(pid, productname, user_id, billno, quantity, saledate, total))
-    cu.execute("update storage set CurrentQuantity=CurrentQuantity-%s where Productname = '%s'" % (quantity, productname))
+    # FIX: parameterized queries
+    cu.execute(
+        "INSERT INTO CustomerOrder VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (pid, productname, user_id, billno, quantity, saledate, total)
+    )
+    cu.execute(
+        "UPDATE Storage SET CurrentQuantity = CurrentQuantity - %s WHERE ProductName = %s",
+        (quantity, productname)
+    )
     db.commit()
 
 def database_create():
-    global db
     db = mys.connect(
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
@@ -292,17 +343,18 @@ def database_create():
         database=os.getenv("DB_DATABASE")
     )
     cu = db.cursor()
-    cu.execute("create table Users (IdNo int,Name varchar(20),UserType varchar(15),password varchar(300))")
-    cu.execute("create table Products (P_Id int primary key,ProductName varchar(20),SalePrice int,SupplierName varchar(15))")
-    cu.execute("create table Storage (P_Id int,ProductName varchar(20),PurchaseCost int,pqty int,Currentquantity int,Purchasedate date,foreign key(P_Id) references Products(P_Id))")
-    cu.execute("create table CustomerOrder (P_Id int,ProductName varchar(20), Name varchar(20), BillNo int, Quantity int, SaleDate date, Total int,foreign key(P_Id) references Products(P_Id))")
+    # FIX: Added PRIMARY KEY AUTO_INCREMENT to IdNo
+    cu.execute("create table Users (IdNo int PRIMARY KEY AUTO_INCREMENT, Name varchar(20), UserType varchar(15), password varchar(300))")
+    cu.execute("create table Products (P_Id int primary key, ProductName varchar(20), SalePrice int, SupplierName varchar(15))")
+    cu.execute("create table Storage (P_Id int, ProductName varchar(20), PurchaseCost int, pqty int, Currentquantity int, Purchasedate date, foreign key(P_Id) references Products(P_Id))")
+    cu.execute("create table CustomerOrder (P_Id int, ProductName varchar(20), Name varchar(20), BillNo int, Quantity int, SaleDate date, Total int, foreign key(P_Id) references Products(P_Id))")
     db.commit()
+    return db
 
 print("                   INVENTORY MANAGEMENT SYSTEM")
 print("--------------------------------------------------------------------------------")
 print("")
 try:
-    global db
     db = mys.connect(
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
@@ -311,8 +363,9 @@ try:
     )
 except Exception as e:
     print(f"Database connection failed: {e}")
-    database_create()
-    
+    db = database_create()
+
+migrate_db(db)
 
 while True:
-    users()
+    users(db)
