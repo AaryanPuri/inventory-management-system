@@ -15,48 +15,57 @@ An Inventory Management System built using Python and MySQL, designed to streaml
 ## Features
 1. User Authentication (Admin & Manager/Employee roles)
 2. Add / Edit / Delete Products
-3. Track Inventory Levels
+3. Track Inventory Levels with stock validation
 4. Customer Billing and Order Management
 5. View Detailed Reports:
-6. Products Report
-7. Staff Report
-8. Storage Report
-9. Customer Order Report
-10. Yearly Profit/Loss Analysis (Graphical)
-11. Graphical User Interface (GUI) using tkinter
-12. Command-line Interface (CLI) option for flexibility
+   - Products Report
+   - Staff Report
+   - Storage Report
+   - Customer Order Report
+   - Yearly Profit/Loss Analysis (Graphical)
+6. Graphical User Interface (GUI) using tkinter
+7. Command-line Interface (CLI) option for flexibility
 
 ## Tech Stack
 1. Python 3.7+
-2. MySQL (via mysql.connector)
+2. MySQL (via mysql-connector-python)
 3. tkinter (GUI)
 4. pandas (Data handling)
-5. matplotlib (Graphical reporting)
-6. tkcalendar, pandastable (GUI enhancements)
+5. numpy (Numerical operations)
+6. matplotlib (Graphical reporting)
+7. tkcalendar, pandastable (GUI enhancements)
+8. bcrypt (Password hashing)
+9. python-dotenv (Environment variable management)
 
 ## Installation
-1. Prerequisites- Python 3.7 or higher, MySQL server, Install Python dependencies: ```pip install -r requirements.txt  ```
-2. Configure Credentials-
-   ```
-    DB_HOST=localhost
-    DB_USER=your_username
-    DB_PASSWORD=your_password
-    DB_DATABASE=inventory
-   ```
-   
-2. Setup Database
-Run the program once. If the database inventory does not exist, it will be created automatically with required tables:
-a) Users
-b) Products
-c) Storage
-d) CustomerOrder
+1. **Prerequisites** — Python 3.7 or higher, MySQL server
 
-3. Run the Application: CLI Version- python "User Roles and Reporting.py", GUI Version- python "Inventory Management GUI.py"
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Configure credentials** — Create a `.env` file in the project root:
+   ```
+   DB_HOST=localhost
+   DB_USER=your_username
+   DB_PASSWORD=your_password
+   DB_DATABASE=inventory
+   ```
+
+4. **Setup database** — Run the program once. If the `inventory` database does not exist, it will be created automatically with the required tables:
+   - Users
+   - Products
+   - Storage
+   - CustomerOrder
+
+5. **Run the application**
+   - GUI: `python "Inventory Management GUI.py"`
+   - CLI: `python "User Roles and Reporting.py"`
 
 ## User Roles
-1) Admin- Can view reports, Add/remove users, Manage employees
-2) Employee/Manager- Add/edit products, Process customer orders, View inventory reports
-
+1. **Admin** — View reports, add/remove users, manage employees
+2. **Employee/Manager** — Add/edit products, process customer orders, view inventory reports
 
 
 ## Author 👤
