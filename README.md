@@ -40,6 +40,11 @@ An Inventory Management System built using Python and MySQL, designed to streaml
 ## Installation
 1. **Prerequisites** — Python 3.7 or higher, MySQL server
 
+   On Linux, also install tkinter:
+   ```bash
+   sudo apt install python3-tk -y
+   ```
+
 2. **Install dependencies**
    ```bash
    pip install -r requirements.txt
@@ -60,8 +65,8 @@ An Inventory Management System built using Python and MySQL, designed to streaml
    - CustomerOrder
 
 5. **Run the application**
-   - GUI: `python "Inventory Management GUI.py"`
-   - CLI: `python "User Roles and Reporting.py"`
+   - GUI: `python ims_gui.py`
+   - CLI: `python ims_cli.py`
 
 ## User Roles
 1. **Admin** — View reports, add/remove users, manage employees
