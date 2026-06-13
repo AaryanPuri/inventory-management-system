@@ -87,8 +87,9 @@ class gui:
                      highlightthickness=1, highlightbackground=BORDER)
 
     def _section_title(self, parent, text, row=0):
-        self._lbl(parent, text, size=22, bold=True, bg=BG
-                  ).grid(row=row, column=0, columnspan=4, sticky="W", pady=(0, 20))
+        Label(parent, text=text, font=("Arial", 22, "bold"), bg=BG, fg=TEXT,
+              anchor="center", width=38
+              ).grid(row=row, column=0, columnspan=2, pady=(0, 20))
 
     def _menu_btn(self, parent, text, row, command):
         b = Button(parent, text=text, command=command,
@@ -178,16 +179,23 @@ class gui:
               ).grid(row=4, column=0, columnspan=2, sticky="W", pady=(0, 3))
         self.v2 = StringVar()
         self.e2 = self._entry(card, self.v2, show="*")
-        self.e2.grid(row=5, column=0, columnspan=2, sticky="EW", pady=(0, 18))
+        self.e2.grid(row=5, column=0, columnspan=2, sticky="EW", pady=(0, 12))
+
+        Label(card, text="Login as", font=("Arial", 11, "bold"), bg=CARD, fg=TEXT
+              ).grid(row=6, column=0, columnspan=2, sticky="W", pady=(0, 3))
+        self.role_var = StringVar(value="Admin")
+        role_menu = OptionMenu(card, self.role_var, "Admin", "Employee")
+        role_menu.config(font=("Arial", 11), bg="white", relief=SOLID, width=28)
+        role_menu.grid(row=7, column=0, columnspan=2, sticky="EW", pady=(0, 16))
 
         Button(card, text="Login", command=self.users,
                bg=PRIMARY, fg="white", activebackground=P_ACT, activeforeground="white",
                font=("Arial", 12, "bold"), relief=FLAT, bd=0, cursor="hand2",
                pady=10, width=32
-               ).grid(row=6, column=0, columnspan=2, sticky="EW")
+               ).grid(row=8, column=0, columnspan=2, sticky="EW")
 
         self.l4 = Label(card, text="", fg=DANGER, font=("Arial", 11), bg=CARD)
-        self.l4.grid(row=7, column=0, columnspan=2, pady=(10, 0))
+        self.l4.grid(row=9, column=0, columnspan=2, pady=(10, 0))
 
         self.e1.focus()
         self.window.bind("<Return>", lambda e: self.users())
@@ -204,7 +212,7 @@ class gui:
             self.window.configure(bg=BG)
             self.create_first_admin()
             return
-        self.checklogin(username, password)
+        self.checklogin(username, password, self.role_var.get())
 
     def create_first_admin(self):
         self.window.configure(bg=BG)
@@ -252,7 +260,7 @@ class gui:
             cu = self.db.cursor()
             cu.execute(
                 "INSERT INTO Users (Name, UserType, password) VALUES (%s, %s, %s)",
-                (name, 'admin', hashed)
+                (name, 'Admin', hashed)
             )
             self.db.commit()
             self.f_setup.destroy()
@@ -264,7 +272,7 @@ class gui:
                pady=12, width=32
                ).grid(row=4, column=0, columnspan=2, sticky="EW")
 
-    def checklogin(self, username, password):
+    def checklogin(self, username, password, selected_role="Admin"):
         cu = self.db.cursor()
         cu.execute("SELECT Name, password, UserType FROM Users WHERE Name = %s", (username,))
         user = cu.fetchone()
@@ -285,10 +293,16 @@ class gui:
                 cu2.execute("UPDATE Users SET password = %s WHERE Name = %s", (hashed, username))
                 self.db.commit()
         if authenticated:
+            actual_role = user[2].strip().capitalize()
+            if actual_role != selected_role:
+                self.l4.config(text=f"This account is not an {selected_role}")
+                self.e1.delete(0, END)
+                self.e2.delete(0, END)
+                return
             self.f.destroy()
             self.window.unbind("<Return>")
             self.window.configure(bg=BG)
-            if user[2] == "admin":
+            if actual_role == "Admin":
                 self.adminscreen()
             else:
                 self.employeescreen()
@@ -302,10 +316,28 @@ class gui:
     def adminscreen(self):
         f = self._screen()
         self._section_title(f, "Admin Dashboard")
-        self._menu_btn(f, "View Reports",     1, lambda: [f.destroy(), self.view_stats(0)])
-        self._menu_btn(f, "Remove Employee",  2, lambda: [f.destroy(), self.remove_employeescreen()])
-        self._menu_btn(f, "Add User",         3, lambda: [f.destroy(), self.add_userscreen()])
-        self._logout_btn(f,                   4, lambda: [f.destroy(), self.loginscreen()])
+        self._menu_btn(f, "View Reports",      1, lambda: [f.destroy(), self.view_stats(0)])
+        self._menu_btn(f, "Add Product",       2, lambda: [f.destroy(), self.add_product()])
+        self._menu_btn(f, "Edit Product",      3, lambda: [f.destroy(), self.edit_product()])
+        self._menu_btn(f, "Customer Order",    4, lambda: [f.destroy(), self.customerorder()])
+        self._menu_btn(f, "Employee Options",  5, lambda: [f.destroy(), self.employee_options()])
+        self._logout_btn(f,                    6, lambda: [f.destroy(), self.loginscreen()])
+
+    def employee_options(self):
+        f = self._screen()
+        self._section_title(f, "Employee Options")
+        self._menu_btn(f, "Add Employee",    1, lambda: [f.destroy(), self.add_userscreen()])
+        self._menu_btn(f, "Remove Employee", 2, lambda: [f.destroy(), self.remove_employeescreen()])
+        self._menu_btn(f, "View Employees",  3, lambda: [f.destroy(), self.view_employees()])
+        Button(f, text="Back", command=lambda: [f.destroy(), self.adminscreen()],
+               bg=LOGOUT, fg=TEXT, activebackground=BORDER,
+               font=("Arial", 12), relief=FLAT, bd=0, cursor="hand2",
+               pady=14, width=38
+               ).grid(row=4, column=0, columnspan=2, pady=5, sticky="EW")
+
+    def view_employees(self):
+        self._report_screen("select Idno, Name, UserType from Users", 0,
+                            lambda: [self.f2.destroy(), self.employee_options()])
 
     def employeescreen(self):
         f = self._screen()
@@ -323,12 +355,13 @@ class gui:
         self._menu_btn(f, "Staff Report",          2, lambda: [f.destroy(), self.staffreport(p)])
         self._menu_btn(f, "Storage Report",        3, lambda: [f.destroy(), self.storagereport(p)])
         self._menu_btn(f, "Customer Order Report", 4, lambda: [f.destroy(), self.customer_orderreport(p)])
+        self._menu_btn(f, "Yearly Profit/Loss",    5, lambda: [f.destroy(), self.yearly_report(p)])
         back = (lambda: [f.destroy(), self.employeescreen()]) if p == 1 else (lambda: [f.destroy(), self.adminscreen()])
         Button(f, text="Back", command=back,
                bg=LOGOUT, fg=TEXT, activebackground=BORDER,
                font=("Arial", 12), relief=FLAT, bd=0, cursor="hand2",
                pady=14, width=38
-               ).grid(row=5, column=0, columnspan=2, pady=5, sticky="EW")
+               ).grid(row=6, column=0, columnspan=2, pady=5, sticky="EW")
 
     # ── Reports ──────────────────────────────────────────────
 
@@ -341,27 +374,91 @@ class gui:
         self._btn(self.f2, "Back", back, bg=LOGOUT, fg=TEXT
                   ).pack(anchor="w", pady=(0, 12))
 
+        table_frame = Frame(self.f2)
+        table_frame.pack(fill=BOTH, expand=True)
+
         cu = self.db.cursor()
         cu.execute(query)
         header = list(cu.column_names)
         rows = cu.fetchall()
         table = pd.DataFrame(rows, columns=header) if rows else pd.DataFrame(columns=header)
-        pt = Table(self.f2, dataframe=table, showtoolbar=True, showstatusbar=True)
-        pt.pack(fill=BOTH, expand=True)
+        pt = Table(table_frame, dataframe=table, showtoolbar=True, showstatusbar=True, editable=False)
         pt.show()
 
     def productreport(self, p):
-        self._report_screen("select * from products", p)
+        self._report_screen("select * from Products", p)
 
     def staffreport(self, p):
-        self._report_screen("select Idno, Name, usertype from users", p)
+        self._report_screen("select Idno, Name, UserType from Users", p)
 
     def customer_orderreport(self, p):
-        self._report_screen("select * from customerorder", p)
+        self._report_screen("select * from CustomerOrder", p)
 
     def storagereport(self, p):
         back = (lambda: [self.f2.destroy(), self.edit_product()]) if p == 2 else None
-        self._report_screen("select * from storage", p, back)
+        self._report_screen("select * from Storage", p, back)
+
+    def yearly_report(self, p):
+        import numpy as np
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+        cu = self.db.cursor()
+        cu.execute("select Year(Purchasedate) as year, SUM(purchasecost*pqty) as cp from Storage s, Products p where s.productname=p.productname group by year")
+        cp_rows = cu.fetchall()
+        cu2 = self.db.cursor()
+        cu2.execute("select year(Saledate) as year, sum(quantity*saleprice) as sp from CustomerOrder c, Products p where p.productname=c.productname group by year")
+        sp_rows = cu2.fetchall()
+
+        data = {}
+        for row in cp_rows:
+            data[int(row[0])] = [row[1], 0]
+        for row in sp_rows:
+            t = int(row[0])
+            if t in data:
+                data[t][1] = row[1]
+            else:
+                data[t] = [0, row[1]]
+
+        if not data:
+            messagebox.showinfo("Yearly Report", "No data available yet.")
+            self.view_stats(p)
+            return
+
+        years = sorted(data.keys())
+        cp     = [data[y][0] for y in years]
+        sp     = [data[y][1] for y in years]
+        profit = [data[y][1] - data[y][0] for y in years]
+
+        self.window.configure(bg=BG)
+        self.f2 = Frame(self.window, bg=BG)
+        self.f2.pack(fill=BOTH, expand=True, padx=30, pady=20)
+
+        back = lambda: [self.f2.destroy(), plt.close('all'), self.view_stats(p)]
+        self._btn(self.f2, "Back", back, bg=LOGOUT, fg=TEXT).pack(anchor="w", pady=(0, 12))
+
+        br1 = np.arange(len(years))
+        br2 = [x + 0.25 for x in br1]
+        br3 = [x + 0.25 for x in br2]
+
+        fig, ax = plt.subplots(figsize=(8, 4))
+        fig.patch.set_facecolor(BG)
+        ax.set_facecolor(BG)
+        ax.bar(br1, sp,     color='#2563EB', width=0.25, edgecolor='grey', label='Sales')
+        ax.bar(br2, cp,     color='#EF4444', width=0.25, edgecolor='grey', label='Cost')
+        ax.bar(br3, profit, color='#10B981', width=0.25, edgecolor='grey', label='Profit')
+        ax.axhline(y=0, color="k")
+        ax.set_xlabel("Year")
+        ax.set_ylabel("Amount")
+        ax.set_title("Yearly Profit / Loss Report")
+        ax.set_xticks([r + 0.25 for r in range(len(years))])
+        ax.set_xticklabels(years)
+        ax.legend()
+        fig.tight_layout()
+
+        canvas = FigureCanvasTkAgg(fig, master=self.f2)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=BOTH, expand=True)
 
     # ── Validation ───────────────────────────────────────────
 

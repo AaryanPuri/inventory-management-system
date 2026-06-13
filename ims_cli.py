@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 import numpy as np
 import matplotlib.pyplot as plt
+from getpass import getpass
 import sys
 import os
 from dotenv import load_dotenv
@@ -21,7 +22,7 @@ def view(db):
     print("1-products report, 2-staff report, 3-storage report, 4-Customer Order Report, 5-Yearly Report")
     i = input("Enter your choice : ")
     if i == "1":
-        cu.execute("select * from products")
+        cu.execute("select * from Products")
         header = cu.column_names
         cu = cu.fetchall()
         if cu == []:
@@ -31,7 +32,7 @@ def view(db):
         table.columns = header
         print(table)
     elif i == "2":
-        cu.execute("select Idno,Name,usertype from users")
+        cu.execute("select Idno,Name,UserType from Users")
         header = cu.column_names
         cu = cu.fetchall()
         if cu == []:
@@ -41,7 +42,7 @@ def view(db):
         table.columns = header
         print(table)
     elif i == "3":
-        cu.execute("select * from storage")
+        cu.execute("select * from Storage")
         header = cu.column_names
         cu = cu.fetchall()
         if cu == []:
@@ -51,7 +52,7 @@ def view(db):
         table.columns = header
         print(table)
     elif i == "4":
-        cu.execute("select * from customerorder")
+        cu.execute("select * from CustomerOrder")
         header = cu.column_names
         cu = cu.fetchall()
         if cu == []:
@@ -62,10 +63,10 @@ def view(db):
         print(table)
     elif i == "5":
         data = {}
-        cu.execute("select Year(Purchasedate) as year,(purchasecost*pqty) as cp from storage s,products p where s.productname=p.productname group by year")
+        cu.execute("select Year(Purchasedate) as year, SUM(purchasecost*pqty) as cp from Storage s,Products p where s.productname=p.productname group by year")
         cp = cu.fetchall()
         cu = db.cursor()
-        cu.execute("select year(Saledate) as year,sum(quantity*saleprice) as sp from customerorder c,products p where p.productname=c.productname group by year")
+        cu.execute("select year(Saledate) as year,sum(quantity*saleprice) as sp from CustomerOrder c,Products p where p.productname=c.productname group by year")
         sp = cu.fetchall()
         for i in cp:
             t = int(i[0])
@@ -118,7 +119,7 @@ def add_user(db):
     cu = db.cursor()
     a = input("Admin/Manager: ").lower()
     u = input("Enter username: ")
-    p = input("Enter password: ")
+    p = getpass("Enter password: ")
     # FIX: hash password with bcrypt before storing
     # FIX: parameterized query + AUTO_INCREMENT handles IdNo
     hashed = bcrypt.hashpw(p.encode(), bcrypt.gensalt()).decode()
@@ -191,7 +192,7 @@ def users(db):
             users(db)
             return
         u = input("Enter username: ")
-        p = input("Enter password: ")
+        p = getpass("Enter password: ")
         cu = db.cursor()
         cu.execute("SELECT Name, password, UserType FROM Users WHERE Name = %s", (u,))
         user = cu.fetchone()
